@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalender Event Pro</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #000;
+            display: flex; justify-content: center;
+            padding: 10px;
+        }
+
+        /* Container Utama mirip layar HP */
+        .phone-container {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            border-radius: 40px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            min-height: 90vh;
+        }
+
+        /* Navigasi Atas */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 10px;
+        }
+
+        .year-nav {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 1.5rem; font-weight: 900;
+        }
+
+        .btn-nav {
+            background: #eee; border: none; padding: 8px 12px;
+            border-radius: 50%; cursor: pointer; font-weight: 900;
+        }
+
+        .month-title {
+            font-size: 2.5rem; font-weight: 900; margin-left: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Grid Kalender */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-top: 1px solid #eee;
+        }
+
+        .day-label {
+            text-align: center; font-size: 0.7rem; color: #888;
+            padding: 10px 0; font-weight: 700;
+        }
+
+        .date-cell {
+            border-top: 1px solid #eee;
+            min-height: 90px;
+            padding: 5px;
+            display: flex; flex-direction: column; gap: 2px;
+        }
+
+        .date-number {
+            font-size: 1.1rem; font-weight: 900; margin-bottom: 4px;
+            width: 30px; height: 30px; display: flex; 
+            align-items: center; justify-content: center;
+        }
+
+        /* Tanggal Merah Bulat */
+        .is-holiday .date-number {
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 50%;
+        }
+
+        /* Label Event (Pill) */
+        .event-pill {
+            font-size: 0.6rem; padding: 2px 6px; border-radius: 4px;
+            font-weight: 700; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pill-blue { background: #d1e9ff; color: #007aff; }
+        .pill-green { background: #d3f9d8; color: #2b8a3e; }
+        .pill-red { background: #ffe3e3; color: #e03131; }
+        .pill-yellow { background: #fff9db; color: #f08c00; }
+
+        /* Modal Pop-up Berlangganan */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; 
+            justify-content: center; align-items: center; z-index: 999;
+        }
+
+        .modal {
+            background: white; padding: 30px; border-radius: 20px;
+            text-align: center; width: 85%; max-width: 350px;
+        }
+
+        .btn-wa {
+            background: #25d366; color: white; padding: 12px;
+            display: block; text-decoration: none; border-radius: 10px;
+            margin-top: 15px; font-weight: 900;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="subModal">
+        <div class="modal">
+            <h2 style="font-weight:900">BERLANGGANAN</h2>
+            <p style="margin: 10px 0; font-weight:700">Update Kalender 2026</p>
+            <a href="https://wa.me/6281511642805" class="btn-wa">WHATSAPP SAYA</a>
+            <p onclick="document.getElementById('subModal').style.display='none'" 
+               style="margin-top:15px; cursor:pointer; font-size:0.8rem; color:#888">SKIP</p>
+        </div>
+    </div>
+
+    <div class="phone-container">
+        <div class="header">
+            <div class="year-nav">
+                <button class="btn-nav" onclick="changeMonth(-1)">❮</button>
+                <span id="currentYear">2026</span>
+                <button class="btn-nav" onclick="changeMonth(1)">❯</button>
+            </div>
+            <div style="font-size: 1.5rem;">🔍 ☰ +</div>
+        </div>
+
+        <h1 class="month-title" id="monthName">April</h1>
+
+        <div class="calendar-grid" id="calendarGrid">
+            <div class="day-label">S</div><div class="day-label">M</div>
+            <div class="day-label">T</div><div class="day-label">W</div>
+            <div class="day-label">T</div><div class="day-label">F</div>
+            <div class="day-label">S</div>
+            </div>
+    </div>
+
+    <script>
+        let currentStatus = new Date(); 
+
+        // Contoh Data Event (Bisa kamu tambah sesuka hati)
+        const eventData = {
+            "2026-3-1": [{t: "April Fool", c: "pill-red"}], // Bulan di JS mulai dari 0 (3 = April)
+            "2026-3-15": [{t: "Tax Day", c: "pill-blue"}, {t: "Meet Boss", c: "pill-green"}],
+            "2026-3-20": [{t: "Idul Fitri", c: "pill-red"}],
+            "2026-4-1": [{t: "Hari Buruh", c: "pill-red"}]
+        };
+
+        function render() {
+            const grid = document.getElementById('calendarGrid');
+            const monthName = document.getElementById('monthName');
+            const currentYear = document.getElementById('currentYear');
+
+            const month = currentStatus.getMonth();
+            const year = currentStatus.getFullYear();
+
+            // Update Label
+            const listBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            monthName.innerText = listBulan[month];
+            currentYear.innerText = year;
+
+            // Bersihkan tanggal tapi sisakan label hari
+            const labels = grid.querySelectorAll('.day-label');
+            grid.innerHTML = '';
+            labels.forEach(l => grid.appendChild(l));
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Kosongan awal bulan
+            for (let i = 0; i < firstDay; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            // Buat Tanggal
+            for (let i = 1; i <= daysInMonth; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'date-cell';
+                
+                const dateKey = `${year}-${month}-${i}`;
+                
+                // Cek jika hari Minggu atau ada event merah
+                const isSunday = new Date(year, month, i).getDay() === 0;
+                let holidayClass = isSunday ? 'is-holiday' : '';
+                
+                // Cek event
+                let eventHtml = '';
+                if(eventData[dateKey]) {
+                    eventData[dateKey].forEach(ev => {
+                        eventHtml += `<div class="event-pill ${ev.c}">${ev.t}</div>`;
+                        if(ev.c === 'pill-red') holidayClass = 'is-holiday';
+                    });
+                }
+
+                cell.innerHTML = `
+                    <div class="date-number ${holidayClass}">${i}</div>
+                    ${eventHtml}
+                `;
+                
+                if (isSunday) cell.classList.add('is-holiday');
+                
+                grid.appendChild(cell);
+            }
+        }
+
+        function changeMonth(dir) {
+            currentStatus.setMonth(currentStatus.getMonth() + dir);
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
